@@ -11,6 +11,30 @@ const ROCK_SCORE: i32 = 1;
 const PAPER_SCORE: i32 = 2;
 const SCISSORS_SCORE: i32 = 3;
 
+enum Strat {
+    Win,
+    Lose,
+    Draw,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+enum Shape {
+    Rock,
+    Paper,
+    Scissors,
+}
+
+impl Shape {
+    // Returns the point value for this shape.
+    fn get_score(&self) -> i32 {
+        match *self {
+            Shape::Rock => ROCK_SCORE,
+            Shape::Paper => PAPER_SCORE,
+            Shape::Scissors => SCISSORS_SCORE,
+        }
+    }
+}
+
 struct EvalTable {
     beats: HashMap<Shape, Shape>,
     beaten_by: HashMap<Shape, Shape>,
@@ -33,30 +57,6 @@ impl EvalTable {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-enum Shape {
-    Rock,
-    Paper,
-    Scissors,
-}
-
-enum Strat {
-    Win,
-    Lose,
-    Draw,
-}
-
-impl Shape {
-    // Returns the point value for this shape.
-    fn get_score(&self) -> i32 {
-        match *self {
-            Shape::Rock => ROCK_SCORE,
-            Shape::Paper => PAPER_SCORE,
-            Shape::Scissors => SCISSORS_SCORE,
-        }
-    }
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let f = File::open("input.txt")?;
     let lines = io::BufReader::new(f).lines().map(|l| l.unwrap());
@@ -66,20 +66,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut scores = [0; 2];
 
     for line in lines {
-        let tokens: Vec<&str> = line.trim().split(' ').collect();
+        let (op_shape, player_strat) = parse_round(line);
 
-        if tokens.len() != 2 {
-            panic!("Malformed input: {:?}", tokens);
-        }
-
-        let player_strat = parse_strategy(tokens[1]);
-        let op_shape = parse_shape(tokens[0]);
         let player_shape = choose_shape_from_strat(&eval_table, op_shape, player_strat);
 
-        let (score_a, score_b) = eval_round(&eval_table, op_shape, player_shape);
+        let (op_score, player_score) = eval_round(&eval_table, op_shape, player_shape);
 
-        scores[0] += score_a;
-        scores[1] += score_b;
+        scores[0] += op_score;
+        scores[1] += player_score;
     }
 
     println!("The total score of the opponent is: {:?}", scores[0]);
@@ -88,22 +82,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn parse_shape(shape_key: &str) -> Shape {
-    match shape_key {
+fn shape_from_token(token: &str) -> Shape {
+    match token {
         "A" => Shape::Rock,
         "B" => Shape::Paper,
         "C" => Shape::Scissors,
-        _ => panic!("{shape_key} does not correspond to a shape."),
+        _ => panic!("{token} does not correspond to a shape."),
     }
 }
 
-fn parse_strategy(strat_key: &str) -> Strat {
-    match strat_key {
+fn strat_from_token(token: &str) -> Strat {
+    match token {
         "X" => Strat::Lose,
         "Y" => Strat::Draw,
         "Z" => Strat::Win,
-        _ => panic!("{strat_key} does not correspond to a strategy."),
+        _ => panic!("{token} does not correspond to a strategy."),
     }
+}
+
+fn parse_round(line: String) -> (Shape, Strat) {
+    let tokens: Vec<&str> = line.trim().split(' ').collect();
+
+    if tokens.len() != 2 {
+        panic!("Malformed input: {line}");
+    }
+
+    (shape_from_token(tokens[0]), strat_from_token(tokens[1]))
 }
 
 fn choose_shape_from_strat(table: &EvalTable, op_shape: Shape, player_strat: Strat) -> Shape {
