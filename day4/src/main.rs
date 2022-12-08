@@ -10,6 +10,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let re = Regex::new(r"^(\d{1,2})-(\d{1,2}),(\d{1,2})-(\d{1,2})$").unwrap();
 
     let mut contain_count = 0;
+    let mut overlap_count = 0;
 
     for line in lines {
         let captures = re
@@ -29,9 +30,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         if a_contains_b || b_contains_a {
             contain_count += 1;
         }
+
+        let a_overlaps_b = range_a_end >= range_b_start && range_a_start <= range_b_end;
+        let b_overlaps_a = range_b_end >= range_a_start && range_b_start <= range_a_end;
+
+        if a_overlaps_b || b_overlaps_a {
+            overlap_count += 1;
+        }
     }
 
     println!("Contained ranges: {contain_count}");
+    println!("Overlapped ranges: {overlap_count}");
 
     Ok(())
 }
